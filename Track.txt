@@ -1,0 +1,64 @@
+3D Earth Visualization
+
+Use CesiumJS to render only Earth (no unnecessary UI elements like timelines or credits).
+
+Index.html :
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Debris Visualization</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
+    <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    <script src="main.js"></script>
+</body>
+</html>
+
+styles.css:
+/* Fullscreen rendering */
+html, body, #cesiumContainer {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+main.JS
+// Set your Cesium Ion access token
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyZWUyZmNiMS05ZDc4LTRmNjctYTJiNi01Y2M2MzhhNTdjMzAiLCJpZCI6Mjc1ODI3LCJpYXQiOjE3Mzk0NzExNjZ9.Qn9b6Vw2pHbDTdKLPmJoSLcG9W1QGocgKO7KGMfRwa8';
+
+// Initialize Cesium Viewer
+const viewer = new Cesium.Viewer('cesiumContainer', {
+    animation: false,  // Remove timeline
+    timeline: false,   // Remove Cesium's default timeline
+    fullscreenButton: false, 
+    sceneModePicker: false, 
+    baseLayerPicker: false,
+    homeButton: false, 
+    geocoder: false, 
+    navigationHelpButton: false,
+    infoBox: false, 
+    selectionIndicator: false
+});
+
+viewer.cesiumWidget.creditContainer.style.display = "none"; // Hide Cesium's default credits
+
+// Zoom to Earth
+viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000) // Adjust zoom level
+});
+
+// Set up Earth's rotation speed (radians per frame)
+const angularVelocity = Cesium.Math.toRadians(0.02);
+function rotateEarth() {
+  viewer.scene.postRender.addEventListener(() => {
+    viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, angularVelocity);
+  });
+}
+rotateEarth();

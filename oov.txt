@@ -1,0 +1,37 @@
+Machine learning for predicting Space Debris Collision Risk.
+
+1. **3D Earth Visualization**  
+   - Use **CesiumJS** to render only **Earth** (no unnecessary UI elements like timelines or credits).  
+
+2. **Real-Time Space Debris & Satellite Tracking**  
+   - Fetch **real-time TLE (Two-Line Element) data** from **Celestrak**.  
+   - Show **moving** satellites and debris (not static).  
+   - Display **accurate orbital paths/trajectories** around Earth.  
+
+3. **Interactive Object Selection**  
+   - Clicking on a **satellite or debris** should open a smooth **info panel**.  
+   - This panel will display **basic details** and **collision risk** (predicted using your ML model).  
+
+4. **ML Model Integration**  
+   - Your trained ML model from **GitHub** will predict **collision risk**.  
+   - The model should run **asynchronously** to avoid performance lag.  
+   - **Highlight risky objects** in the UI and **notify users** about potential threats.  
+
+5. **Timeline & Dropdown Navigation**  
+   - A **timeline** (like NASA’s Eyes on the Solar System) to show **past & future paths**.  
+   - A **dropdown menu** to filter between **satellites and debris**.  
+   - Selecting a **specific object** from the list should **focus the camera on it**.  
+
+6. **Performance Optimization**  
+   - Use **Level of Detail (LOD) rendering** for better performance.  
+   - Use **Web Workers** for parallel processing.  
+   - **Cache TLE data** to reduce API calls but refresh periodically.  
+   - **GPU acceleration** to enhance real-time rendering.  
+
+7. **Dynamic & Professional UI**  
+   - **Smooth zoom, pan, rotate** controls.  
+   - Show **real-time telemetry data** for each object.  
+   - The UI should be **clean and professional** (only **HTML, CSS, JS**).  
+
+Basically, you want a **NASA-like interactive 3D space debris tracker** that uses **real-time data** and **ML-based collision prediction**, with **smooth UI interactions and optimized performance**.  
+
