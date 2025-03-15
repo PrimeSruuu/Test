@@ -62,3 +62,168 @@ function rotateEarth() {
   });
 }
 rotateEarth();
+
+Next Task:
+**Real-Time Space Debris & Satellite Tracking**  
+   - Fetch **real-time TLE (Two-Line Element) data** from **Celestrak**.  
+   - Show **moving** satellites and debris (not static).  
+   - Display **accurate orbital paths/trajectories** around Earth.  
+
+   Fetch **real-time TLE (Two-Line Element) data** from **Celestrak**. 
+   Main.JS
+   // Endpoints for TLE data
+const satelliteUrl = 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle';
+const debrisUrl    = 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=cosmos-2251-debris&FORMAT=tle';
+
+// Limits (you can change these values later)
+const satelliteLimit = 200;
+const debrisLimit = 200;
+
+// ---------------------
+// Fetch and Parse TLE Data
+// ---------------------
+async function fetchTLE(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Error fetching data from ${url}: ${response.status}`);
+  }
+  return response.text();
+}
+
+function parseTLE(tleText) {
+  // Split text into non-empty lines
+  const lines = tleText.split('\n').filter(line => line.trim().length > 0);
+  const tleSets = [];
+  for (let i = 0; i < lines.length; i += 3) {
+    if (i + 2 < lines.length) {
+      tleSets.push({
+        name: lines[i].trim(),
+        line1: lines[i + 1].trim(),
+        line2: lines[i + 2].trim()
+      });
+    }
+  }
+  return tleSets;
+}
+
+Fetching & Parsing TLE Data:
+
+Two endpoints are defined (one for active satellites, one for Cosmos 2251 debris).
+The fetchTLE() function retrieves the raw TLE text, and parseTLE() groups every three lines into an object.
+
+------Show **moving** satellites and debris (not static). 
+index.html
+<script src="https://unpkg.com/satellite.js/dist/satellite.min.js"></script> //Paste Before script
+
+main.JS
+// ---------------------
+// Compute Dynamic Position using satellite.js
+// ---------------------
+function computePosition(tle, date) {
+  const satrec = satellite.twoline2satrec(tle.line1, tle.line2);
+  const posVel = satellite.propagate(satrec, date);
+  if (!posVel.position) return null;
+  const gmst = satellite.gstime(date);
+  const posGd = satellite.eciToGeodetic(posVel.position, gmst);
+  return {
+    longitude: satellite.degreesLong(posGd.longitude),
+    latitude: satellite.degreesLat(posGd.latitude),
+    height: posGd.height * 1000 // convert km to meters
+  };
+}
+
+------Display **accurate orbital paths/trajectories** around Earth.
+main.JS
+// ---------------------
+// Add Dynamic Entity (current position) & Orbit Path to Cesium
+// ---------------------
+function addEntity(tle, color) {
+  // Dynamic moving point
+  viewer.entities.add({
+    name: tle.name,
+    position: new Cesium.CallbackProperty((time, result) => {
+      const pos = computePosition(tle, Cesium.JulianDate.toDate(time));
+      return pos ? Cesium.Cartesian3.fromDegrees(pos.longitude, pos.latitude, pos.height) : result;
+    }, false),
+    point: {
+      pixelSize: 10,
+      color: color
+    }
+  });
+}
+
+function addOrbitPath(tle, color) {
+  const positions = computeTrajectoryPoints(tle, 60); // sample every 60 seconds
+  viewer.entities.add({
+    name: tle.name + " Orbit Path",
+    polyline: {
+      positions: positions,
+      width: 2,
+      material: new Cesium.ColorMaterialProperty(color)
+    }
+  });
+}
+
+// ---------------------
+// Load TLE Data and Render Entities & Orbits
+// ---------------------
+(async function loadAndRenderTLEs() {
+  try {
+    // Fetch TLE data concurrently for satellites and debris
+    const [satText, debrisText] = await Promise.all([
+      fetchTLE(satelliteUrl),
+      fetchTLE(debrisUrl)
+    ]);
+    
+    const satellites = parseTLE(satText).slice(0, satelliteLimit);
+    const debris = parseTLE(debrisText).slice(0, debrisLimit);
+    
+    console.log("Loaded Satellites:", satellites);
+    console.log("Loaded Debris:", debris);
+    
+    // For each satellite, add a dynamic entity and its orbital trajectory (yellow)
+    satellites.forEach(tle => {
+      addEntity(tle, Cesium.Color.YELLOW);
+      addOrbitPath(tle, Cesium.Color.YELLOW);
+    });
+    
+    // For each debris object, add a dynamic entity and its orbital trajectory (red)
+    debris.forEach(tle => {
+      addEntity(tle, Cesium.Color.RED);
+      addOrbitPath(tle, Cesium.Color.RED);
+    });
+    
+  } catch (error) {
+    console.error("Error loading and rendering TLE data:", error);
+  }
+})();
+
+Explaination of Main.JS still now
+Detailed Explanation
+Viewer Setup:
+
+The Cesium viewer is initialized with minimal UI elements.
+The default credits are hidden and the camera is set to a view that shows Earth from a distance.
+Earth Rotation:
+
+A post-render event rotates the camera around Earth to simulate Earth’s rotation.
+Fetching & Parsing TLE Data:
+
+Two endpoints are defined (one for active satellites, one for Cosmos 2251 debris).
+The fetchTLE() function retrieves the raw TLE text, and parseTLE() groups every three lines into an object.
+Dynamic Position Calculation:
+
+computePosition() uses satellite.js to convert TLE data into a current position. This function is called repeatedly via a Cesium.CallbackProperty to update the position in real time.
+Orbital Trajectory Calculation:
+
+computeTrajectoryPoints() calculates positions along one full orbit by sampling at fixed intervals (e.g., every 60 seconds) using satellite.js’s propagation.
+The resulting array of Cesium Cartesian3 positions is used to create a polyline representing the orbital path.
+Entity Creation:
+
+addEntity() adds a point entity with a dynamic position (updated each tick).
+addOrbitPath() adds a polyline entity to show the computed orbital trajectory.
+For satellites, the color is set to yellow; for debris, red is used.
+Loading and Rendering:
+
+The IIFE loadAndRenderTLEs() fetches, parses, limits, and then renders both dynamic points and their orbit paths for each TLE set.
+
