@@ -165,3 +165,81 @@ function addOrbitPath(tle, color) {
     console.error("Error loading and rendering TLE data:", error);
   }
 })();
+
+// ==========================
+// Interactive Object Selection and Collision Risk API Integration
+// ==========================
+
+// Fetch collision risk from your Flask API
+async function fetchCollisionRisk(features) {
+    const apiUrl = 'http://127.0.0.1:5000/predict'; // Updated API endpoint
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(features)
+      });
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data.collision_risk;
+    } catch (error) {
+      console.error("Error fetching collision risk:", error);
+      return null;
+    }
+  }
+  
+  // Show the info panel and populate it with basic details
+  function showInfoPanel(entity) {
+    const infoPanel = document.getElementById('infoPanel');
+    document.getElementById('satName').textContent = entity.name || "Unknown Object";
+    document.getElementById('satDetails').textContent = ""; // Clear or add additional details here
+    updateInfoPanel("Loading collision risk...");
+    infoPanel.classList.add('show');
+  }
+  
+  // Update collision risk message in the info panel
+  function updateInfoPanel(message) {
+    document.getElementById('collisionRisk').textContent = message;
+  }
+  
+  // Close button event for info panel
+  document.getElementById('closeBtn').addEventListener('click', () => {
+    document.getElementById('infoPanel').classList.remove('show');
+  });
+  
+  // Set up object picking using Cesium's ScreenSpaceEventHandler
+  const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+  handler.setInputAction(async function(click) {
+    const pickedObject = viewer.scene.pick(click.position);
+    if (Cesium.defined(pickedObject) && pickedObject.id) {
+      const entity = pickedObject.id;
+      showInfoPanel(entity);
+      
+      // Safely access properties; use an empty object if undefined.
+      const props = entity.properties || {};
+      
+      // Extract required features from the entity.
+      const features = {
+        sat1: props.sat1 ? props.sat1.getValue() : 0,
+        sat2: props.sat2 ? props.sat2.getValue() : 0,
+        altitude: props.altitude ? props.altitude.getValue() : 0,
+        velocity: props.velocity ? props.velocity.getValue() : 0,
+        inclination: props.inclination ? props.inclination.getValue() : 0,
+        eccentricity: props.eccentricity ? props.eccentricity.getValue() : 0,
+        raan: props.raan ? props.raan.getValue() : 0,
+        perigee: props.perigee ? props.perigee.getValue() : 0,
+        anomaly: props.anomaly ? props.anomaly.getValue() : 0
+      };
+      
+      // Fetch collision risk from Flask API
+      const risk = await fetchCollisionRisk(features);
+      if (risk !== null) {
+        updateInfoPanel(`Collision Risk: ${risk}`);
+      } else {
+        updateInfoPanel("Collision Risk: Unavailable");
+      }
+    }
+  }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+  
